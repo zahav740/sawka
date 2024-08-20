@@ -1,5 +1,6 @@
 package com.alexey.sawka;
 
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -47,7 +48,6 @@ public class GetActivity extends AppCompatActivity {
                 connection.setDoOutput(true); // Установка на true для POST-запросов
 
                 // Отправка данных (если требуется отправка тела запроса)
-//                String jsonInputString = "{\"request\":\"data\"}"; // Пример данных для POST
                 String jsonInputString = "{\"text\":\"ваш текст\",\"source\":\"smartphone\"}";
                 try (OutputStream os = new BufferedOutputStream(connection.getOutputStream())) {
                     byte[] input = jsonInputString.getBytes("utf-8");
@@ -86,6 +86,12 @@ public class GetActivity extends AppCompatActivity {
 
                     // Обновление UI
                     responseTextView.setText("response: " + message);
+
+                    // Передача текста в PlayActivity
+                    Intent intent = new Intent(GetActivity.this, PlayActivity.class);
+                    intent.putExtra("recognizedText", message);
+                    startActivity(intent);
+
                 } catch (Exception e) {
                     Log.e("GetActivity", "Ошибка парсинга JSON: " + e.getMessage(), e);
                 }

@@ -20,10 +20,11 @@ import java.util.Locale;
 
 public class RecorderActivity extends AppCompatActivity {
 
-    private static final String TAG = "RecorderActivity";  // Тег для логов
+    private static final String TAG = "RecorderActivity";
     private static final int REQUEST_CODE_AUDIO_PERMISSION = 1;
     private TextView textView;
     private SpeechRecognizer speechRecognizer;
+    private String partialText = "";  // Для хранения частичных результатов
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,17 +33,15 @@ public class RecorderActivity extends AppCompatActivity {
 
         textView = findViewById(R.id.textView);
 
-        // Проверяем наличие разрешения на использование микрофона
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_CODE_AUDIO_PERMISSION);
         } else {
-            startSpeechRecognition();  // Если разрешение есть, запускаем распознавание
+            startSpeechRecognition();
         }
     }
 
-    // Запуск распознавания речи
     private void startSpeechRecognition() {
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
         speechRecognizer.setRecognitionListener(new RecognitionListener() {
@@ -80,14 +79,22 @@ public class RecorderActivity extends AppCompatActivity {
             public void onResults(Bundle results) {
                 ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 if (matches != null && !matches.isEmpty()) {
-                    String recognizedText = matches.get(0);  // Получаем распознанный текст
+                    String recognizedText = matches.get(0);
                     Log.d(TAG, "Recognized: " + recognizedText);
-                    textView.setText(recognizedText);  // Выводим текст на экран
+                    textView.setText(recognizedText);
 
                     // Переходим в SenderActivity
                     Intent intent = new Intent(RecorderActivity.this, SenderActivity.class);
-                    intent.putExtra("recognizedText", recognizedText);  // Передаем распознанный текст
-                    Log.d(TAG, "Launching SenderActivity with recognizedText: " + recognizedText);
+                    intent.putExtra("recognizedText", recognizedText);
+                    startActivity(intent);
+                } else if (!partialText.isEmpty()) {
+                    // Если нет финального результата, используем последний частичный результат
+                    Log.d(TAG, "Using partial result: " + partialText);
+                    textView.setText(partialText);
+
+                    // Переходим в SenderActivity
+                    Intent intent = new Intent(RecorderActivity.this, SenderActivity.class);
+                    intent.putExtra("recognizedText", partialText);
                     startActivity(intent);
                 } else {
                     Log.e(TAG, "No recognized text found!");
@@ -99,8 +106,9 @@ public class RecorderActivity extends AppCompatActivity {
             public void onPartialResults(Bundle partialResults) {
                 ArrayList<String> partialResultsList = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                 if (partialResultsList != null && !partialResultsList.isEmpty()) {
-                    Log.d(TAG, "Partial result: " + partialResultsList.get(0));
-                    textView.setText(partialResultsList.get(0));  // Вывод промежуточного текста
+                    partialText = partialResultsList.get(0);  // Обновляем частичный результат
+                    Log.d(TAG, "Partial result: " + partialText);
+                    textView.setText(partialText);
                 }
             }
 
@@ -108,13 +116,15 @@ public class RecorderActivity extends AppCompatActivity {
             public void onEvent(int eventType, Bundle params) {}
         });
 
-        // Настройка намерения для SpeechRecognizer
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-        intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);  // Включаем промежуточные результаты
+        intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
 
-        // Запускаем прослушивание речи
+        // Устанавливаем паузу в 3 секунды для завершения распознавания
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 3000);
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 3000);
+
         speechRecognizer.startListening(intent);
     }
 
@@ -126,13 +136,12 @@ public class RecorderActivity extends AppCompatActivity {
         }
     }
 
-    // Обработка запроса разрешений
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_CODE_AUDIO_PERMISSION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startSpeechRecognition();  // Запускаем распознавание, если разрешение получено
+                startSpeechRecognition();
             } else {
                 Toast.makeText(this, "Разрешение на запись аудио отклонено", Toast.LENGTH_SHORT).show();
             }
