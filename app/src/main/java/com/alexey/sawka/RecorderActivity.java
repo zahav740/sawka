@@ -33,6 +33,7 @@ public class RecorderActivity extends AppCompatActivity {
 
         textView = findViewById(R.id.textView);
 
+        // Проверяем разрешение на использование микрофона
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
@@ -42,6 +43,7 @@ public class RecorderActivity extends AppCompatActivity {
         }
     }
 
+    // Метод для запуска распознавания речи
     private void startSpeechRecognition() {
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
         speechRecognizer.setRecognitionListener(new RecognitionListener() {
@@ -84,18 +86,12 @@ public class RecorderActivity extends AppCompatActivity {
                     textView.setText(recognizedText);
 
                     // Переходим в SenderActivity
-                    Intent intent = new Intent(RecorderActivity.this, SenderActivity.class);
-                    intent.putExtra("recognizedText", recognizedText);
-                    startActivity(intent);
+                    startSenderActivity(recognizedText);
                 } else if (!partialText.isEmpty()) {
                     // Если нет финального результата, используем последний частичный результат
                     Log.d(TAG, "Using partial result: " + partialText);
                     textView.setText(partialText);
-
-                    // Переходим в SenderActivity
-                    Intent intent = new Intent(RecorderActivity.this, SenderActivity.class);
-                    intent.putExtra("recognizedText", partialText);
-                    startActivity(intent);
+                    startSenderActivity(partialText);
                 } else {
                     Log.e(TAG, "No recognized text found!");
                     Toast.makeText(RecorderActivity.this, "Ошибка: текст не распознан", Toast.LENGTH_SHORT).show();
@@ -120,12 +116,17 @@ public class RecorderActivity extends AppCompatActivity {
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-
-        // Устанавливаем паузу в 3 секунды для завершения распознавания
         intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 3000);
         intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 3000);
 
         speechRecognizer.startListening(intent);
+    }
+
+    // Метод для перехода в SenderActivity с распознанным текстом
+    private void startSenderActivity(String recognizedText) {
+        Intent intent = new Intent(RecorderActivity.this, SenderActivity.class);
+        intent.putExtra("recognizedText", recognizedText);
+        startActivity(intent);
     }
 
     @Override

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option java_package = "com.alexey.sawka.grpc";
+option java_outer_classname = "VoiceServiceProto";
+
+service VoiceService {
+  rpc ProcessVoice (stream VoiceRequest) returns (stream VoiceResponse);
+}
+
+message VoiceRequest {
+  string text = 1;
+  string source = 2;
+}
+
+message VoiceResponse {
+  string response = 1;
+}
