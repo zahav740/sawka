@@ -1,11 +1,12 @@
 package com.alexey.sawka;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
 import com.alexey.sawka.grpc.VoiceServiceGrpc;
-import com.alexey.sawka.grpc.VoiceServiceProto.VoiceRequest;
-import com.alexey.sawka.grpc.VoiceServiceProto.VoiceResponse;
+import com.alexey.sawka.grpc.VoiceServiceOuterClass.VoiceRequest;
+import com.alexey.sawka.grpc.VoiceServiceOuterClass.VoiceResponse;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
@@ -32,10 +33,15 @@ public class SenderActivity extends AppCompatActivity {
     }
 
     private void setupGrpcConnection() {
-        channel = ManagedChannelBuilder.forAddress("192.168.1.156", 3000)
-                .usePlaintext()
-                .build();
-        asyncStub = VoiceServiceGrpc.newStub(channel);
+        try {
+            channel = ManagedChannelBuilder.forAddress("10.0.0.183", 3000)
+                    .usePlaintext()
+                    .build();
+            asyncStub = VoiceServiceGrpc.newStub(channel);
+            Log.d(TAG, "gRPC connection setup successful");
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting up gRPC connection", e);
+        }
     }
 
     private void sendTextToServer(String recognizedText) {
@@ -53,6 +59,11 @@ public class SenderActivity extends AppCompatActivity {
             @Override
             public void onCompleted() {
                 Log.d(TAG, "gRPC запрос завершен");
+
+                // Переход на GetActivity после завершения работы gRPC
+                Intent intent = new Intent(SenderActivity.this, GetActivity.class);
+                startActivity(intent);
+                finish(); // Закрываем текущую Activity
             }
         };
 
@@ -67,7 +78,7 @@ public class SenderActivity extends AppCompatActivity {
             requestObserver.onCompleted();
         } catch (RuntimeException e) {
             requestObserver.onError(e);
-            throw e;
+            Log.e(TAG, "Ошибка при отправке запроса: ", e);
         }
     }
 
