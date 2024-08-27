@@ -1,11 +1,12 @@
 package com.alexey.sawka;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
 import com.alexey.sawka.grpc.VoiceServiceGrpc;
-import com.alexey.sawka.grpc.VoiceServiceProto.VoiceRequest;
-import com.alexey.sawka.grpc.VoiceServiceProto.VoiceResponse;
+import com.alexey.sawka.grpc.VoiceServiceOuterClass.VoiceRequest;
+import com.alexey.sawka.grpc.VoiceServiceOuterClass.VoiceResponse;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
@@ -32,17 +33,37 @@ public class SenderActivity extends AppCompatActivity {
     }
 
     private void setupGrpcConnection() {
-        channel = ManagedChannelBuilder.forAddress("192.168.1.156", 3000)
-                .usePlaintext()
-                .build();
-        asyncStub = VoiceServiceGrpc.newStub(channel);
+        try {
+            channel = ManagedChannelBuilder.forAddress("192.168.1.156", 3000)
+                    .usePlaintext()
+                    .build();
+            asyncStub = VoiceServiceGrpc.newStub(channel);
+            Log.d(TAG, "gRPC connection setup successful");
+        } catch (Exception e) {
+            Log.e(TAG, "Error setting up gRPC connection", e);
+        }
     }
 
     private void sendTextToServer(String recognizedText) {
         StreamObserver<VoiceResponse> responseObserver = new StreamObserver<VoiceResponse>() {
             @Override
             public void onNext(VoiceResponse response) {
-                Log.d(TAG, "Ответ от сервера: " + response.getResponse());
+                String serverResponse = response.getResponse();
+
+                // Удалим лишние кавычки, если они присутствуют
+                if (serverResponse.startsWith("\"") && serverResponse.endsWith("\"")) {
+                    serverResponse = serverResponse.substring(1, serverResponse.length() - 1);
+                }
+
+                Log.d(TAG, "Ответ от сервера: " + serverResponse);
+
+                // Переходим на GetActivity
+                String finalServerResponse = serverResponse;
+                runOnUiThread(() -> {
+                    Intent intent = new Intent(SenderActivity.this, GetActivity.class);
+                    intent.putExtra("serverResponse", finalServerResponse);
+                    startActivity(intent);
+                });
             }
 
             @Override
@@ -67,7 +88,7 @@ public class SenderActivity extends AppCompatActivity {
             requestObserver.onCompleted();
         } catch (RuntimeException e) {
             requestObserver.onError(e);
-            throw e;
+            Log.e(TAG, "Ошибка при отправке запроса: ", e);
         }
     }
 
